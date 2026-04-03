@@ -1,0 +1,10 @@
+{% extends "admin/change_list.html" %}
+
+{% block object-tools-items %}
+    <li>
+        <a href="scanner/" class="addlink" style="background: #417690; border-radius: 4px; color: white;">
+            Bulk Scan Tool
+        </a>
+    </li>
+    {{ block.super }}
+{% endblock %}

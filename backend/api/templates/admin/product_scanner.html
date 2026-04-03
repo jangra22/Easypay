@@ -1,0 +1,101 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block content %}
+<div id="content-main">
+    <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <p>Use your camera to scan products. They will be automatically added to the database using OpenFoodFacts data.</p>
+        
+        <div id="scanner-container" style="position: relative; width: 100%; max-width: 500px; margin: 0 auto;">
+            <video id="video" style="width: 100%; border-radius: 8px; background: #000;"></video>
+            <div id="scanner-laser" style="position: absolute; top: 50%; left: 0; width: 100%; height: 2px; background: red; box-shadow: 0 0 8px red; display:none;"></div>
+        </div>
+
+        <div style="margin-top: 20px; text-align: center;">
+            <button id="start-btn" class="button" style="background: #417690; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;">Start Camera</button>
+            <button id="manual-btn" class="button" style="margin-left: 10px;">Manual Input</button>
+        </div>
+
+        <div id="results-log" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+            <h3>Recent Scans</h3>
+            <ul id="scan-list" style="list-style: none; padding: 0;"></ul>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/@zxing/library@latest"></script>
+<script>
+    const codeReader = new ZXing.BrowserMultiFormatReader();
+    const video = document.getElementById('video');
+    const laser = document.getElementById('scanner-laser');
+    const scanList = document.getElementById('scan-list');
+    let isScanning = false;
+
+    document.getElementById('start-btn').addEventListener('click', async () => {
+        if (isScanning) {
+            codeReader.reset();
+            isScanning = false;
+            document.getElementById('start-btn').innerText = 'Start Camera';
+            laser.style.display = 'none';
+            return;
+        }
+
+        try {
+            const videoInputDevices = await codeReader.listVideoInputDevices();
+            const selectedDeviceId = videoInputDevices[0].deviceId;
+            
+            laser.style.display = 'block';
+            isScanning = true;
+            document.getElementById('start-btn').innerText = 'Stop Camera';
+
+            codeReader.decodeFromVideoDevice(selectedDeviceId, 'video', async (result, err) => {
+                if (result) {
+                    await handleScan(result.getText());
+                    // Pause briefly after scan
+                    codeReader.reset();
+                    setTimeout(() => {
+                        if (isScanning) startScanning();
+                    }, 2000);
+                }
+            });
+        } catch (err) {
+            console.error(err);
+            alert("Camera error: " + err);
+        }
+    });
+
+    async function handleScan(barcode) {
+        // Add to list immediately as loading
+        const li = document.createElement('li');
+        li.style.padding = '10px';
+        li.style.borderBottom = '1px solid #f0f0f0';
+        li.innerHTML = `<strong>${barcode}</strong>: Processing...`;
+        scanList.prepend(li);
+
+        try {
+            const response = await fetch('/api/admin-bulk-scan/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ barcode })
+            });
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                li.innerHTML = `<span style="color: green;">✓</span> <strong>${barcode}</strong>: ${data.name} (${data.brand}) - Saved!`;
+            } else {
+                li.innerHTML = `<span style="color: red;">✗</span> <strong>${barcode}</strong>: ${data.message}`;
+            }
+        } catch (e) {
+            li.innerHTML = `<span style="color: red;">✗</span> <strong>${barcode}</strong>: Network Error`;
+        }
+    }
+
+    document.getElementById('manual-btn').addEventListener('click', () => {
+        const barcode = prompt("Enter barcode manually:");
+        if (barcode) handleScan(barcode);
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,10 @@
+django>=4.2
+djangorestframework
+django-cors-headers
+python-dotenv
+django-mongodb-backend
+pymongo[srv]
+requests
+google-generativeai
+qrcode[pil]
+dnspython
