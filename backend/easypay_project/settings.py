@@ -25,6 +25,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
 ]
@@ -68,11 +69,13 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django_mongodb_backend.fields.ObjectIdAutoField'
 
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')
+
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://localhost:3000",
-    "http://10.145.213.190:5173",
     "http://127.0.0.1:5173",
+    FRONTEND_URL,
 ]
 CORS_ALLOW_ALL_ORIGINS = False # Must be False for CORS_ALLOW_CREDENTIALS
 CORS_ALLOW_CREDENTIALS = True

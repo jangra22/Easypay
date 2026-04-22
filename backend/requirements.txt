@@ -8,3 +8,5 @@ requests
 google-generativeai
 qrcode[pil]
 dnspython
+gunicorn
+whitenoise

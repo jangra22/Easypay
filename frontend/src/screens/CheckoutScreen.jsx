@@ -48,15 +48,64 @@ function CheckoutScreen() {
     }
   };
 
+  const loadScript = (src) => {
+    return new Promise((resolve) => {
+      const script = document.createElement("script");
+      script.src = src;
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
   const handlePlaceOrder = async () => {
     setProcessing(true);
-    try {
-      const order = await api.createOrder(appliedCoupon, user?.email);
-      navigate(`/receipt/${order.order_id}`);
-    } catch (err) {
-      setError('Checkout failed. Please try again.');
+    
+    const res = await loadScript("https://checkout.razorpay.com/v1/checkout.js");
+    if (!res) {
+      setError("Razorpay SDK failed to load. Are you online?");
       setProcessing(false);
+      return;
     }
+
+    const currentTotalFinal = cart.total - discount;
+    const amountInPaise = Math.round(currentTotalFinal * 100);
+
+    const options = {
+      key: "rzp_test_SeAuHwIc2NR0Oq", // TODO: Add your Razorpay Test Key ID here
+      amount: amountInPaise.toString(),
+      currency: "INR",
+      name: "EasyPay Self-Checkout",
+      description: "Demo Payment",
+      handler: async function (response) {
+        try {
+          const order = await api.createOrder(appliedCoupon, user?.email);
+          navigate(`/receipt/${order.order_id}`);
+        } catch (err) {
+          setError('Order failed after payment. Please try again.');
+          setProcessing(false);
+        }
+      },
+      prefill: {
+        email: user?.email || "",
+      },
+      theme: {
+        color: "#6366f1" 
+      },
+      modal: {
+        ondismiss: function() {
+          setProcessing(false);
+        }
+      }
+    };
+
+    const paymentObject = new window.Razorpay(options);
+    paymentObject.on('payment.failed', function (response){
+      setError("Payment failed! " + response.error.description);
+      setProcessing(false);
+    });
+
+    paymentObject.open();
   };
 
   if (loading) return (

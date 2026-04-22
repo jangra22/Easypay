@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Html5QrcodeScanner, Html5QrcodeSupportedFormats } from 'html5-qrcode';
+import { Html5QrcodeScanner, Html5QrcodeSupportedFormats, Html5QrcodeScanType } from 'html5-qrcode';
 import { ShieldCheck, XCircle, CheckCircle2, Ticket, ArrowLeft, RefreshCw, KeyRound, User, QrCode, LogOut, ChevronRight, Search, Package, Image as ImageIcon } from 'lucide-react';
 import { api } from '../services/api';
+import { BrowserMultiFormatReader } from '@zxing/library';
 import { AnimatePresence, motion } from 'framer-motion';
 
 function GuardVerifyScreen() {
@@ -63,7 +64,7 @@ function GuardVerifyScreen() {
             qrbox: { width: 250, height: 250 },
             aspectRatio: 1.0,
             formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ],
-            supportedScanTypes: [0, 1] // 0: Camera, 1: File
+            supportedScanTypes: [ Html5QrcodeScanType.SCAN_TYPE_CAMERA, Html5QrcodeScanType.SCAN_TYPE_FILE ]
           },
           false
         );
@@ -78,6 +79,25 @@ function GuardVerifyScreen() {
       };
     }
   }, [currentView]);
+
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setLoading(true);
+    try {
+      const reader = new BrowserMultiFormatReader();
+      const url = URL.createObjectURL(file);
+      const result = await reader.decodeFromImageUrl(url);
+      if (result) {
+        if (window.navigator.vibrate) window.navigator.vibrate(200);
+        onScanSuccess(result.getText());
+      }
+    } catch (err) {
+      alert("Could not find a valid QR code in the image. Please try again with a clearer photo.");
+      setLoading(false);
+    }
+  };
 
   const onScanSuccess = async (decodedText) => {
     setCurrentView('RESULT');
@@ -272,7 +292,7 @@ function GuardVerifyScreen() {
           
           <div className="bg-white/10 rounded-2xl p-4 border border-white/10 backdrop-blur-sm flex justify-between items-center">
              <div>
-               <p className="text-primary-100 text-xs font-semibold mb-1">Today's Scans</p>
+               <p className="text-primary-100 text-xs font-semibold mb-1">Total Scans</p>
                <p className="text-3xl font-black">{scanCount}</p>
              </div>
              <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
@@ -394,7 +414,18 @@ function GuardVerifyScreen() {
             <div className="mt-10 flex flex-col items-center text-center">
                 <QrCode size={32} className="text-primary mb-3 mx-auto" strokeWidth={1.5} />
                 <h3 className="font-bold text-gray-900 text-lg mb-1">Align QR Code</h3>
-                <p className="text-sm text-gray-500 w-3/4 mx-auto leading-relaxed">Position the customer's receipt QR code within the frame to verify.</p>
+                <p className="text-sm text-gray-500 w-3/4 mx-auto leading-relaxed mb-6">Position the customer's receipt QR code within the frame to verify.</p>
+                
+                <label className="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-primary rounded-xl py-3 px-6 flex items-center justify-center gap-2 font-bold transition-all shadow-sm cursor-pointer active:scale-95">
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={handleFileUpload}
+                    className="hidden" 
+                  />
+                  <ImageIcon size={20} />
+                  Upload QR Image from Device
+                </label>
             </div>
           </motion.div>
         ) : (
