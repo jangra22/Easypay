@@ -1,4 +1,14 @@
-const BASE_URL = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:8000/api`;
+const getBaseUrl = () => {
+  const envUrl = import.meta.env.VITE_API_URL;
+  if (envUrl) {
+    // Ensure it ends with /api even if the user forgot it in Vercel settings
+    const cleanUrl = envUrl.endsWith('/') ? envUrl.slice(0, -1) : envUrl;
+    return cleanUrl.endsWith('/api') ? cleanUrl : `${cleanUrl}/api`;
+  }
+  return `http://${window.location.hostname}:8000/api`;
+};
+
+const BASE_URL = getBaseUrl();
 
 export const api = {
   // Products
