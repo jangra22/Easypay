@@ -5,7 +5,7 @@ python-dotenv
 django-mongodb-backend
 pymongo[srv]
 requests
-google-generativeai
+google-genai
 qrcode[pil]
 dnspython
 gunicorn
