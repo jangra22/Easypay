@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Html5QrcodeScanner, Html5QrcodeSupportedFormats, Html5QrcodeScanType } from 'html5-qrcode';
+import { Html5Qrcode, Html5QrcodeSupportedFormats, Html5QrcodeScanType } from 'html5-qrcode';
 import { ShieldCheck, XCircle, CheckCircle2, Ticket, ArrowLeft, RefreshCw, KeyRound, User, QrCode, LogOut, ChevronRight, Search, Package, Image as ImageIcon } from 'lucide-react';
 import { api } from '../services/api';
 import { BrowserMultiFormatReader } from '@zxing/library';
@@ -54,30 +54,54 @@ function GuardVerifyScreen() {
   };
 
   useEffect(() => {
-    let scanner;
-    if (currentView === 'SCANNER') {
-      const timer = setTimeout(() => {
-        scanner = new Html5QrcodeScanner(
-          "guard-qr-reader",
-          { 
-            fps: 10, 
+    let html5QrCode;
+    
+    const startScanning = async () => {
+      if (currentView === 'SCANNER') {
+        try {
+          html5QrCode = new Html5Qrcode("guard-qr-reader");
+          const config = { 
+            fps: 15, 
             qrbox: { width: 250, height: 250 },
             aspectRatio: 1.0,
-            formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ],
-            supportedScanTypes: [ Html5QrcodeScanType.SCAN_TYPE_CAMERA, Html5QrcodeScanType.SCAN_TYPE_FILE ]
-          },
-          false
-        );
-        scanner.render(onScanSuccess, onScanError);
-      }, 500);
+            formatsToSupport: [ 
+              Html5QrcodeSupportedFormats.QR_CODE,
+              Html5QrcodeSupportedFormats.EAN_13,
+              Html5QrcodeSupportedFormats.EAN_8,
+              Html5QrcodeSupportedFormats.CODE_128,
+              Html5QrcodeSupportedFormats.UPC_A,
+              Html5QrcodeSupportedFormats.UPC_E
+            ]
+          };
 
-      return () => {
-        clearTimeout(timer);
-        if (scanner) {
-          scanner.clear().catch(err => console.error("Failed to clear scanner", err));
+          await html5QrCode.start(
+            { facingMode: "environment" }, 
+            config,
+            (decodedText) => {
+              html5QrCode.stop().then(() => {
+                onScanSuccess(decodedText);
+              });
+            },
+            (errorMessage) => {
+              // Ignore frequent noise errors
+            }
+          );
+        } catch (err) {
+          console.error("Camera start error", err);
+          setError("Could not start camera. Please check permissions.");
         }
-      };
-    }
+      }
+    };
+
+    startScanning();
+
+    return () => {
+      if (html5QrCode) {
+        if (html5QrCode.isScanning) {
+          html5QrCode.stop().catch(err => console.error("Stop failed", err));
+        }
+      }
+    };
   }, [currentView]);
 
   const handleFileUpload = async (event) => {
