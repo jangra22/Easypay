@@ -48,7 +48,7 @@ def get_healthier_alternatives(product, conditions, current_score):
 
     try:
         response = client.models.generate_content(
-            model='gemini-1.5-flash', # Using 1.5-flash as it is highly stable on free tiers
+            model='gemini-2.0-flash', # Reverted to 2.0-flash as 1.5-flash is returning 404
             contents=prompt,
             config=types.GenerateContentConfig(
                 temperature=0.2, # Very low temperature for highly deterministic JSON output
