@@ -9,7 +9,7 @@ from .models import Product, Cart, Coupon, Order, Guard, AppUser
 from .serializers import ProductSerializer, ProductShortSerializer
 from .score_engine import calculate_base_score, apply_condition_penalties, get_score_label
 from .disease_mapper import get_warnings
-from .gemini_service import get_healthier_alternatives
+from .ai_service import get_healthier_alternatives
 from .qr_service import generate_order_qr, generate_user_qr
 import traceback
 
