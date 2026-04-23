@@ -46,36 +46,45 @@ def get_healthier_alternatives(product, conditions, current_score):
         f"]"
     )
 
-    try:
-        response = client.models.generate_content(
-            model='gemini-2.0-flash', # Reverted to 2.0-flash as 1.5-flash is returning 404
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.2, # Very low temperature for highly deterministic JSON output
-                max_output_tokens=1000,
-                response_mime_type="application/json"
-            )
-        )
-        
-        raw_text = response.text
-        if not raw_text:
-            return {'alternatives': [], 'error': 'AI returned an empty response. It might have been blocked by safety filters.'}
-            
-        print("GEMINI RAW RESPONSE:", raw_text) # For debugging in Render logs
-        
-        # Try direct parse first
+    models_to_try = ['gemini-1.5-flash', 'gemini-1.5-flash-8b', 'gemini-1.5-flash-latest', 'gemini-1.5-pro']
+    
+    last_error = None
+    for model_name in models_to_try:
         try:
-            alternatives = json.loads(raw_text)
-            return {'alternatives': alternatives, 'error': None}
-        except json.JSONDecodeError:
-            # Fallback to regex extraction if the AI added markdown or text
-            extracted = extract_json_array(raw_text)
-            if extracted:
-                return {'alternatives': extracted, 'error': None}
-            else:
-                return {'alternatives': [], 'error': 'AI response could not be parsed as JSON.'}
+            print(f"Trying model: {model_name}...")
+            response = client.models.generate_content(
+                model=model_name,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    temperature=0.2, 
+                    max_output_tokens=1000,
+                    response_mime_type="application/json"
+                )
+            )
+            
+            raw_text = response.text
+            if not raw_text:
+                continue # Try next model if empty response
                 
-    except Exception as e:
-        print("GEMINI EXCEPTION:", str(e))
-        return {'alternatives': [], 'error': f'AI service unavailable: {str(e)}'}
+            print(f"GEMINI SUCCESS ({model_name}):", raw_text)
+            
+            try:
+                alternatives = json.loads(raw_text)
+                return {'alternatives': alternatives, 'error': None}
+            except json.JSONDecodeError:
+                extracted = extract_json_array(raw_text)
+                if extracted:
+                    return {'alternatives': extracted, 'error': None}
+                
+        except Exception as e:
+            error_str = str(e)
+            print(f"GEMINI EXCEPTION ({model_name}):", error_str)
+            last_error = error_str
+            # If the error is a 429 Quota Exceeded with limit > 0, we should stop and wait. 
+            # But if limit is 0, it means the model is locked, so we try the next one.
+            if "RESOURCE_EXHAUSTED" in error_str and "limit: 0" not in error_str:
+                return {'alternatives': [], 'error': 'You have exceeded your free tier rate limit (Too many requests per minute). Please wait 30 seconds and try again.'}
+
+    # If all models failed
+    return {'alternatives': [], 'error': f'AI models unavailable on this free tier account. Last error: {last_error}'}
 
