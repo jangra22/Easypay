@@ -10,12 +10,9 @@ const HealthInfoScreen = ({ addToHistory = () => {} }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-
-  const [conditions, setConditions] = useState(() => {
-    if (location.state?.conditions) return location.state.conditions;
-    const saved = localStorage.getItem('health_conditions');
-    return saved ? JSON.parse(saved) : [];
-  });
+  
+  // Directly derive conditions from the authenticated user
+  const conditions = user?.health_conditions || [];
   
   const [product, setProduct] = useState(null);
   const [scoreData, setScoreData] = useState(null);
@@ -138,7 +135,7 @@ const HealthInfoScreen = ({ addToHistory = () => {} }) => {
            
            <div className="relative flex items-center justify-center w-36 h-36 mb-4">
               {/* Semi-Circle SVG */}
-              <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-180 absolute inset-0">
+              <svg viewBox="0 0 100 100" className="w-full h-full absolute inset-0">
                 <path d="M 20 80 A 40 40 0 1 1 80 80" fill="none" stroke="#f1f5f9" strokeWidth="8" strokeLinecap="round" />
                 <motion.path 
                   d="M 20 80 A 40 40 0 1 1 80 80" fill="none" 
