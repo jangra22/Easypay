@@ -25,11 +25,12 @@ def get_healthier_alternatives(product, conditions, current_score):
 
     try:
         response = client.models.generate_content(
-            model='gemini-2.5-flash',
+            model='gemini-2.0-flash',
             contents=prompt,
             config=types.GenerateContentConfig(
                 temperature=0.5, # Lower temperature for strictly formatted responses
-                max_output_tokens=300, # Much smaller output limit
+                max_output_tokens=800, # Increased to prevent JSON from being cut off
+
                 response_mime_type="application/json" # Directly requests valid JSON format
             )
         )
