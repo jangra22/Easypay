@@ -1,3 +1,4 @@
+import React, { useState } from 'react';
 import { ShieldCheck, Check, QrCode, Mail, Calendar, User as UserIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
@@ -19,7 +20,7 @@ const CONDITIONS = [
 
 const HealthProfileScreen = ({ onNext = () => {} }) => {
   const { user, updateHealthProfile } = useAuth();
-  const [localConditions, setLocalConditions] = React.useState(user?.health_conditions || []);
+  const [localConditions, setLocalConditions] = useState(user?.health_conditions || []);
 
   const handleToggle = (id) => {
     setLocalConditions(prev => 
