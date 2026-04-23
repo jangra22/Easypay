@@ -89,10 +89,12 @@ def get_warnings(product, user_conditions):
         })
 
     triggered = [w for w in warnings if w['triggered']]
-    user_at_risk = any(w['user_has_condition'] and w['triggered'] for w in warnings)
+    user_triggered = [w for w in triggered if w['user_has_condition']]
+    
+    user_at_risk = len(user_triggered) > 0
 
     return {
-        'triggered_warnings': triggered,
+        'triggered_warnings': user_triggered, # Only show warnings for diseases the user has
         'all_warnings': warnings,
         'overall_safe': len(triggered) == 0,
         'user_risk_level': 'high' if user_at_risk else 'low',

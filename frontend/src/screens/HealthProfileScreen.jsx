@@ -17,9 +17,23 @@ const CONDITIONS = [
   { id: 'pregnancy', label: 'Pregnancy' },
 ];
 
-const HealthProfileScreen = ({ conditions = [], onToggle = () => {}, onNext = () => {} }) => {
-  const { user } = useAuth();
-  
+const HealthProfileScreen = ({ onNext = () => {} }) => {
+  const { user, updateHealthProfile } = useAuth();
+  const [localConditions, setLocalConditions] = React.useState(user?.health_conditions || []);
+
+  const handleToggle = (id) => {
+    setLocalConditions(prev => 
+      prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]
+    );
+  };
+
+  const handleSaveAndNext = async () => {
+    if (updateHealthProfile) {
+      await updateHealthProfile(localConditions);
+    }
+    onNext();
+  };
+
   return (
     <div className="flex flex-col min-h-[calc(100vh-80px)] md:min-h-0 bg-gray-bg p-4 md:p-8 max-w-5xl mx-auto pb-24">
       {/* User Card - PREMIUM IDENTITY CARD */}
@@ -89,12 +103,12 @@ const HealthProfileScreen = ({ conditions = [], onToggle = () => {}, onNext = ()
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-5 mb-10">
         {CONDITIONS.map((c) => {
-          const isSelected = conditions.includes(c.id);
+          const isSelected = localConditions.includes(c.id);
           return (
             <motion.button
               key={c.id}
               whileTap={{ scale: 0.96 }}
-              onClick={() => onToggle(c.id)}
+              onClick={() => handleToggle(c.id)}
               className={`p-5 rounded-[1.5rem] border-2 text-left transition-all flex flex-col items-start justify-between min-h-[120px] shadow-sm ${
                 isSelected 
                   ? 'bg-primary-50 border-primary text-primary shadow-primary/10' 
@@ -112,7 +126,7 @@ const HealthProfileScreen = ({ conditions = [], onToggle = () => {}, onNext = ()
 
       <div className="mt-auto flex flex-col items-center">
         <button
-          onClick={onNext}
+          onClick={handleSaveAndNext}
           className="w-full max-w-7xl bg-primary hover:bg-primary-600 text-white font-bold py-4 rounded-2xl transition-transform shadow-lg shadow-primary/20 flex items-center justify-center gap-2 text-lg active:scale-[0.98]"
         >
           Save & Start Scanning
