@@ -11,7 +11,8 @@
   },
   "dependencies": {
     "@yudiel/react-qr-scanner": "^2.5.1",
-    "@zxing/library": "^0.21.0",
+    "@zxing/browser": "^0.1.5",
+    "@zxing/library": "^0.21.3",
     "clsx": "^2.1.1",
     "framer-motion": "^11.2.10",
     "html2canvas": "^1.4.1",
@@ -20,6 +21,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.13.0",
+    "react-webcam": "^7.2.0",
     "react-zxing": "^2.1.0",
     "tailwind-merge": "^2.3.0"
   },

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Scanner } from '@yudiel/react-qr-scanner';
+import Webcam from 'react-webcam';
+import { BrowserMultiFormatReader } from '@zxing/library';
 import { ArrowLeft, Flashlight, Store, ArrowRight, HelpCircle, X, ShieldCheck, ShoppingCart, RefreshCw, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../services/api';
@@ -22,7 +23,8 @@ const ScannerScreen = () => {
   const [healthScore, setHealthScore] = useState(null);
   const [healthWarnings, setHealthWarnings] = useState(null);
 
-  const scanningRef = React.useRef(true);
+  const webcamRef = React.useRef(null);
+  const readerRef = React.useRef(new BrowserMultiFormatReader());
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -42,9 +44,33 @@ const ScannerScreen = () => {
 
   const startScanner = async () => {
     setIsScanning(true);
-    scanningRef.current = true;
     setError(null);
     setScannedProduct(null);
+  };
+
+  const captureAndScan = async () => {
+    if (!webcamRef.current) return;
+    
+    // Play a shutter sound/vibrate
+    if (window.navigator.vibrate) window.navigator.vibrate(50);
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const imageSrc = webcamRef.current.getScreenshot();
+      if (!imageSrc) throw new Error("Could not capture image");
+      
+      const result = await readerRef.current.decodeFromImageUrl(imageSrc);
+      if (result) {
+         if (window.navigator.vibrate) window.navigator.vibrate([100, 50, 100]);
+         handleScanSuccess(result.getText());
+      }
+    } catch (err) {
+      setError("No barcode found. Please align the barcode in the frame and capture again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleFileUpload = async (event) => {
@@ -54,9 +80,14 @@ const ScannerScreen = () => {
     setLoading(true);
     setError(null);
     try {
-      // In the new library, file upload is handled differently or we can fallback to the manual barcode for now if it doesn't support file upload directly.
-      // But @yudiel/react-qr-scanner has an upload button built-in if we enable it! We'll just let the Scanner handle it or show an error.
-      setError("Photo upload is temporarily unavailable. Please use the camera or type the barcode manually.");
+      const url = URL.createObjectURL(file);
+      const result = await readerRef.current.decodeFromImageUrl(url);
+      if (result) {
+        if (window.navigator.vibrate) window.navigator.vibrate(200);
+        handleScanSuccess(result.getText());
+      }
+    } catch (err) {
+      setError("Could not find a valid barcode in the image. Please try a clearer photo.");
       setIsScanning(false);
     } finally {
       setLoading(false);
@@ -108,32 +139,16 @@ const ScannerScreen = () => {
 
   return (
     <div className="relative min-h-[calc(100vh-3.5rem)] bg-black overflow-hidden flex flex-col">
-      {/* React QR Scanner */}
+      {/* Live Camera Feed */}
       <div className="absolute inset-0 z-0 bg-black">
         {isScanning && !scannedProduct && (
-          <Scanner
-            onScan={(result) => {
-              if (result && result.length > 0 && scanningRef.current) {
-                scanningRef.current = false;
-                if (window.navigator.vibrate) window.navigator.vibrate(200);
-                handleScanSuccess(result[0].rawValue);
-              }
-            }}
-            onError={(err) => {
-              console.log(err);
-              setError("Camera access denied or unavailable. Please check permissions.");
-            }}
-            formats={[
-              'ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'qr_code'
-            ]}
-            components={{
-              audio: false,
-              finder: false,
-            }}
-            styles={{
-              container: { width: '100%', height: '100%' },
-              video: { objectFit: 'cover', width: '100%', height: '100%' }
-            }}
+          <Webcam
+            audio={false}
+            ref={webcamRef}
+            screenshotFormat="image/jpeg"
+            videoConstraints={{ facingMode: "environment" }}
+            className="absolute inset-0 w-full h-full object-cover"
+            onUserMediaError={() => setError("Camera access denied or unavailable. Please check permissions.")}
           />
         )}
       </div>
@@ -172,9 +187,21 @@ const ScannerScreen = () => {
           
           <div className="absolute top-[58%] w-full text-center">
             <span className="bg-black/50 text-white/90 text-sm px-4 py-2 rounded-full backdrop-blur-md">
-              Align QR/Barcode within the frame
+              Align barcode in frame & tap capture
             </span>
           </div>
+        </div>
+      )}
+
+      {/* Capture Button */}
+      {isScanning && !scannedProduct && (
+        <div className="absolute bottom-16 left-0 w-full flex justify-center z-20">
+          <button 
+            onClick={captureAndScan}
+            className="w-20 h-20 bg-cyan-400 rounded-full flex items-center justify-center border-4 border-white/80 shadow-[0_0_20px_#22d3ee] active:scale-95 transition-transform"
+          >
+            <div className="w-14 h-14 rounded-full border-2 border-black/20 bg-white/20"></div>
+          </button>
         </div>
       )}
 
