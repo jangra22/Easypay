@@ -180,9 +180,9 @@ const ScannerScreen = () => {
              
              {isScanning && (
                <motion.div 
-                 animate={{ y: ["-100%", "100%", "-100%"] }}
+                 animate={{ top: ["0%", "100%", "0%"] }}
                  transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                 className="w-full h-0.5 bg-primary shadow-[0_0_10px_#f35919]"
+                 className="absolute left-0 w-full h-0.5 bg-primary shadow-[0_0_10px_#f35919] z-20"
                />
              )}
           </div>
@@ -225,8 +225,15 @@ const ScannerScreen = () => {
       )}
 
       {error && !scannedProduct && (
-        <div className="absolute top-24 left-6 right-6 z-30 bg-danger text-white p-4 rounded-xl text-center shadow-lg">
-          {error}
+        <div className="absolute top-24 left-6 right-6 z-30 bg-danger text-white p-4 rounded-xl text-center shadow-lg flex flex-col items-center gap-3">
+          <p className="font-medium">{error}</p>
+          <button 
+            onClick={() => { setError(null); startScanner(); }} 
+            className="bg-white/20 hover:bg-white/30 px-5 py-2 rounded-lg text-sm font-bold transition-colors shadow-sm flex items-center gap-2"
+          >
+            <RefreshCw size={16} />
+            Try Again
+          </button>
         </div>
       )}
 
