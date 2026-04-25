@@ -195,7 +195,7 @@ const ScannerScreen = () => {
 
       {/* Capture Button */}
       {isScanning && !scannedProduct && (
-        <div className="absolute bottom-16 left-0 w-full flex justify-center z-20">
+        <div className="absolute top-[65%] left-0 w-full flex justify-center z-20">
           <button 
             onClick={captureAndScan}
             className="w-20 h-20 bg-cyan-400 rounded-full flex items-center justify-center border-4 border-white/80 shadow-[0_0_20px_#22d3ee] active:scale-95 transition-transform"
