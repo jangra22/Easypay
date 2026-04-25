@@ -142,30 +142,30 @@ const ScannerScreen = () => {
       {!scannedProduct && (
         <div className="absolute inset-0 z-10 pointer-events-none">
           {/* Top overlay */}
-          <div className="absolute top-0 w-full h-[25%] bg-black/60 backdrop-blur-[2px]"></div>
+          <div className="absolute top-0 w-full h-[25%] bg-black/60"></div>
           {/* Bottom overlay */}
-          <div className="absolute bottom-0 w-full h-[45%] bg-black/60 backdrop-blur-[2px]"></div>
+          <div className="absolute bottom-0 w-full h-[45%] bg-black/60"></div>
           {/* Left overlay */}
-          <div className="absolute top-[25%] left-0 w-[15%] h-[30%] bg-black/60 backdrop-blur-[2px]"></div>
+          <div className="absolute top-[25%] left-0 w-[15%] h-[30%] bg-black/60"></div>
           {/* Right overlay */}
-          <div className="absolute top-[25%] right-0 w-[15%] h-[30%] bg-black/60 backdrop-blur-[2px]"></div>
+          <div className="absolute top-[25%] right-0 w-[15%] h-[30%] bg-black/60"></div>
           
-          {/* Center transparent frame with orange brackets */}
+          {/* Center transparent frame with scanner brackets */}
           <div className="absolute top-[25%] left-[15%] w-[70%] h-[30%] flex items-center justify-center">
              {/* Top-Left Corner */}
-             <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-primary rounded-tl-xl shadow-[0_0_15px_#f35919]"></div>
+             <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-cyan-400 rounded-tl-xl shadow-[0_0_15px_#22d3ee]"></div>
              {/* Top-Right Corner */}
-             <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-primary rounded-tr-xl shadow-[0_0_15px_#f35919]"></div>
+             <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-cyan-400 rounded-tr-xl shadow-[0_0_15px_#22d3ee]"></div>
              {/* Bottom-Left Corner */}
-             <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-primary rounded-bl-xl shadow-[0_0_15px_#f35919]"></div>
+             <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-cyan-400 rounded-bl-xl shadow-[0_0_15px_#22d3ee]"></div>
              {/* Bottom-Right Corner */}
-             <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-primary rounded-br-xl shadow-[0_0_15px_#f35919]"></div>
+             <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-cyan-400 rounded-br-xl shadow-[0_0_15px_#22d3ee]"></div>
              
              {isScanning && (
                <motion.div 
                  animate={{ top: ["0%", "100%", "0%"] }}
                  transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                 className="absolute left-0 w-full h-0.5 bg-primary shadow-[0_0_10px_#f35919] z-20"
+                 className="absolute left-0 w-full h-0.5 bg-cyan-400 shadow-[0_0_10px_#22d3ee] z-20"
                />
              )}
           </div>
