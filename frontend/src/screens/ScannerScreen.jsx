@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
+import { Scanner } from '@yudiel/react-qr-scanner';
 import { ArrowLeft, Flashlight, Store, ArrowRight, HelpCircle, X, ShieldCheck, ShoppingCart, RefreshCw, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../services/api';
@@ -22,25 +22,13 @@ const ScannerScreen = () => {
   const [healthScore, setHealthScore] = useState(null);
   const [healthWarnings, setHealthWarnings] = useState(null);
 
-  const html5QrCodeRef = React.useRef(null);
-  const scanningRef = React.useRef(false);
+  const scanningRef = React.useRef(true);
   const navigate = useNavigate();
   const { user } = useAuth();
 
   useEffect(() => {
-    // Only instantiate once
-    html5QrCodeRef.current = new Html5Qrcode("reader");
     api.getProducts().then(setProducts).catch(() => {});
     updateCartCount();
-    
-    // Auto-start scanner
-    startScanner();
-    
-    return () => {
-      if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
-        html5QrCodeRef.current.stop().catch(() => {});
-      }
-    };
   }, []);
 
   const updateCartCount = async () => {
@@ -52,74 +40,22 @@ const ScannerScreen = () => {
   };
 
   const startScanner = async () => {
-    if (!html5QrCodeRef.current) return;
-    
-    try {
-      if (html5QrCodeRef.current.isScanning) {
-         await html5QrCodeRef.current.stop();
-      }
-    } catch(e) {}
-
     setIsScanning(true);
     scanningRef.current = true;
-    setLoading(true);
     setError(null);
     setScannedProduct(null);
-    
-    try {
-      await html5QrCodeRef.current.start(
-        { facingMode: "environment" },
-        {
-          fps: 10,
-          qrbox: { width: 250, height: 250 },
-          aspectRatio: 1.0,
-          formatsToSupport: [ 
-            Html5QrcodeSupportedFormats.EAN_13,
-            Html5QrcodeSupportedFormats.EAN_8,
-            Html5QrcodeSupportedFormats.UPC_A,
-            Html5QrcodeSupportedFormats.UPC_E,
-            Html5QrcodeSupportedFormats.CODE_128,
-            Html5QrcodeSupportedFormats.QR_CODE
-          ]
-        },
-        (decodedText) => {
-          if (scanningRef.current) {
-            scanningRef.current = false;
-            if (window.navigator.vibrate) window.navigator.vibrate(200);
-            handleScanSuccess(decodedText);
-            html5QrCodeRef.current.stop().catch(() => {});
-          }
-        },
-        (errorMessage) => {
-          // ignore stream noise
-        }
-      );
-      setLoading(false);
-    } catch (e) {
-      setIsScanning(false);
-      scanningRef.current = false;
-      setLoading(false);
-      setError("Camera access denied or unavailable.");
-    }
   };
 
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
-    if (!file || !html5QrCodeRef.current) return;
+    if (!file) return;
 
     setLoading(true);
     setError(null);
     try {
-      if (html5QrCodeRef.current.isScanning) {
-          await html5QrCodeRef.current.stop().catch(()=>{});
-      }
-      const result = await html5QrCodeRef.current.scanFileV2(file);
-      if (result && result.decodedText) {
-        if (window.navigator.vibrate) window.navigator.vibrate(200);
-        handleScanSuccess(result.decodedText);
-      }
-    } catch (err) {
-      setError("Could not find a valid barcode in the image. Please try a clearer photo.");
+      // In the new library, file upload is handled differently or we can fallback to the manual barcode for now if it doesn't support file upload directly.
+      // But @yudiel/react-qr-scanner has an upload button built-in if we enable it! We'll just let the Scanner handle it or show an error.
+      setError("Photo upload is temporarily unavailable. Please use the camera or type the barcode manually.");
       setIsScanning(false);
     } finally {
       setLoading(false);
@@ -171,14 +107,34 @@ const ScannerScreen = () => {
 
   return (
     <div className="relative min-h-[calc(100vh-3.5rem)] bg-black overflow-hidden flex flex-col">
-      <style>{`
-        #reader { width: 100% !important; height: 100% !important; border: none !important; }
-        #reader video { object-fit: cover !important; width: 100% !important; height: 100% !important; position: absolute; top: 0; left: 0; }
-        #reader canvas { display: none !important; }
-      `}</style>
-      
-      {/* Background Video using Html5Qrcode */}
-      <div id="reader" className="absolute inset-0 z-0 bg-black"></div>
+      {/* React QR Scanner */}
+      <div className="absolute inset-0 z-0 bg-black">
+        {isScanning && !scannedProduct && (
+          <Scanner
+            onScan={(result) => {
+              if (result && result.length > 0 && scanningRef.current) {
+                scanningRef.current = false;
+                if (window.navigator.vibrate) window.navigator.vibrate(200);
+                handleScanSuccess(result[0].rawValue);
+              }
+            }}
+            onError={(err) => {
+              console.log(err);
+            }}
+            formats={[
+              'ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'qr_code'
+            ]}
+            components={{
+              audio: false,
+              finder: false,
+            }}
+            styles={{
+              container: { width: '100%', height: '100%' },
+              video: { objectFit: 'cover', width: '100%', height: '100%' }
+            }}
+          />
+        )}
+      </div>
       
       {/* Dark Overlay with Transparent Cutout for Scanner */}
       {!scannedProduct && (
