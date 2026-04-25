@@ -29,6 +29,7 @@ const ScannerScreen = () => {
   useEffect(() => {
     api.getProducts().then(setProducts).catch(() => {});
     updateCartCount();
+    startScanner();
   }, []);
 
   const updateCartCount = async () => {
@@ -120,6 +121,7 @@ const ScannerScreen = () => {
             }}
             onError={(err) => {
               console.log(err);
+              setError("Camera access denied or unavailable. Please check permissions.");
             }}
             formats={[
               'ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'qr_code'
