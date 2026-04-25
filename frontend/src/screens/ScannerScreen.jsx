@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BrowserMultiFormatReader } from '@zxing/library';
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { ArrowLeft, Flashlight, Store, ArrowRight, HelpCircle, X, ShieldCheck, ShoppingCart, RefreshCw, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../services/api';
@@ -22,13 +22,14 @@ const ScannerScreen = () => {
   const [healthScore, setHealthScore] = useState(null);
   const [healthWarnings, setHealthWarnings] = useState(null);
 
-  const readerRef = React.useRef(null);
+  const html5QrCodeRef = React.useRef(null);
   const scanningRef = React.useRef(false);
   const navigate = useNavigate();
   const { user } = useAuth();
 
   useEffect(() => {
-    readerRef.current = new BrowserMultiFormatReader();
+    // Only instantiate once
+    html5QrCodeRef.current = new Html5Qrcode("reader");
     api.getProducts().then(setProducts).catch(() => {});
     updateCartCount();
     
@@ -36,7 +37,9 @@ const ScannerScreen = () => {
     startScanner();
     
     return () => {
-      if (readerRef.current) readerRef.current.reset();
+      if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
+        html5QrCodeRef.current.stop().catch(() => {});
+      }
     };
   }, []);
 
@@ -49,7 +52,14 @@ const ScannerScreen = () => {
   };
 
   const startScanner = async () => {
-    if (!readerRef.current) return;
+    if (!html5QrCodeRef.current) return;
+    
+    try {
+      if (html5QrCodeRef.current.isScanning) {
+         await html5QrCodeRef.current.stop();
+      }
+    } catch(e) {}
+
     setIsScanning(true);
     scanningRef.current = true;
     setLoading(true);
@@ -57,24 +67,31 @@ const ScannerScreen = () => {
     setScannedProduct(null);
     
     try {
-      const devices = await readerRef.current.listVideoInputDevices();
-      if (!devices || devices.length === 0) throw new Error("No camera found.");
-
-      const targetDevice = devices.find(d => 
-        d.label.toLowerCase().includes('back') || 
-        d.label.toLowerCase().includes('environment')
-      ) || devices[0];
-      
-      readerRef.current.reset();
-      readerRef.current.decodeFromConstraints(
-        { video: { deviceId: targetDevice.deviceId, facingMode: "environment" } },
-        'video',
-        (result) => {
-          if (result && scanningRef.current) {
+      await html5QrCodeRef.current.start(
+        { facingMode: "environment" },
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+          aspectRatio: 1.0,
+          formatsToSupport: [ 
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.EAN_8,
+            Html5QrcodeSupportedFormats.UPC_A,
+            Html5QrcodeSupportedFormats.UPC_E,
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.QR_CODE
+          ]
+        },
+        (decodedText) => {
+          if (scanningRef.current) {
             scanningRef.current = false;
             if (window.navigator.vibrate) window.navigator.vibrate(200);
-            handleScanSuccess(result.getText());
+            handleScanSuccess(decodedText);
+            html5QrCodeRef.current.stop().catch(() => {});
           }
+        },
+        (errorMessage) => {
+          // ignore stream noise
         }
       );
       setLoading(false);
@@ -82,25 +99,28 @@ const ScannerScreen = () => {
       setIsScanning(false);
       scanningRef.current = false;
       setLoading(false);
-      setError(e.message || "Camera access denied.");
+      setError("Camera access denied or unavailable.");
     }
   };
 
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
-    if (!file || !readerRef.current) return;
+    if (!file || !html5QrCodeRef.current) return;
 
     setLoading(true);
     setError(null);
     try {
-      const url = URL.createObjectURL(file);
-      const result = await readerRef.current.decodeFromImageUrl(url);
-      if (result) {
+      if (html5QrCodeRef.current.isScanning) {
+          await html5QrCodeRef.current.stop().catch(()=>{});
+      }
+      const result = await html5QrCodeRef.current.scanFileV2(file);
+      if (result && result.decodedText) {
         if (window.navigator.vibrate) window.navigator.vibrate(200);
-        handleScanSuccess(result.getText());
+        handleScanSuccess(result.decodedText);
       }
     } catch (err) {
-      setError("Could not find a valid barcode in the image. Please try again with a clearer photo.");
+      setError("Could not find a valid barcode in the image. Please try a clearer photo.");
+      setIsScanning(false);
     } finally {
       setLoading(false);
     }
@@ -113,7 +133,6 @@ const ScannerScreen = () => {
       const product = await api.getProductByBarcode(barcode);
       setScannedProduct(product);
       setIsScanning(false);
-      if (readerRef.current) readerRef.current.reset();
 
       const conditions = user?.health_conditions || [];
       const [scoreRes, warningsRes] = await Promise.all([
@@ -152,8 +171,14 @@ const ScannerScreen = () => {
 
   return (
     <div className="relative min-h-[calc(100vh-3.5rem)] bg-black overflow-hidden flex flex-col">
-      {/* Background Video */}
-      <video id="video" className="absolute inset-0 w-full h-full object-cover" autoPlay muted playsInline></video>
+      <style>{`
+        #reader { width: 100% !important; height: 100% !important; border: none !important; }
+        #reader video { object-fit: cover !important; width: 100% !important; height: 100% !important; position: absolute; top: 0; left: 0; }
+        #reader canvas { display: none !important; }
+      `}</style>
+      
+      {/* Background Video using Html5Qrcode */}
+      <div id="reader" className="absolute inset-0 z-0 bg-black"></div>
       
       {/* Dark Overlay with Transparent Cutout for Scanner */}
       {!scannedProduct && (
@@ -361,3 +386,4 @@ const ScannerScreen = () => {
 };
 
 export default ScannerScreen;
+
