@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Webcam from 'react-webcam';
 import { BrowserMultiFormatReader } from '@zxing/library';
-import { ArrowLeft, Flashlight, Store, ArrowRight, HelpCircle, X, ShieldCheck, ShoppingCart, RefreshCw, Check } from 'lucide-react';
+import { ArrowLeft, Flashlight, Store, ArrowRight, HelpCircle, X, ShieldCheck, ShoppingCart, RefreshCw, Check, Camera } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -193,17 +193,7 @@ const ScannerScreen = () => {
         </div>
       )}
 
-      {/* Capture Button */}
-      {isScanning && !scannedProduct && (
-        <div className="absolute top-[65%] left-0 w-full flex justify-center z-20">
-          <button 
-            onClick={captureAndScan}
-            className="w-20 h-20 bg-cyan-400 rounded-full flex items-center justify-center border-4 border-white/80 shadow-[0_0_20px_#22d3ee] active:scale-95 transition-transform"
-          >
-            <div className="w-14 h-14 rounded-full border-2 border-black/20 bg-white/20"></div>
-          </button>
-        </div>
-      )}
+
 
       {/* Header */}
       <div className="relative z-20 flex justify-between items-center p-6 text-white pt-10">
@@ -324,6 +314,17 @@ const ScannerScreen = () => {
       <div className="absolute bottom-0 left-0 w-full bg-[#2a2420] rounded-t-3xl z-20 pb-8 px-6 pt-4">
         <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mb-6"></div>
         <div className="flex flex-col gap-4">
+          {/* New Solid White Capture Button */}
+          {isScanning && !scannedProduct && (
+            <button 
+              onClick={captureAndScan}
+              className="w-full bg-white text-black rounded-xl py-3.5 px-4 flex items-center justify-center gap-3 font-bold active:scale-95 transition-transform"
+            >
+              <Camera size={20} />
+              Capture Barcode
+            </button>
+          )}
+
           <label className="w-full bg-white/10 hover:bg-white/15 border border-white/10 text-white rounded-xl py-3 px-4 flex items-center justify-center gap-3 font-bold transition-colors cursor-pointer active:scale-95">
             <input 
               type="file" 
