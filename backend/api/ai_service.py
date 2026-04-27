@@ -138,18 +138,18 @@ def safe_extract_json_array(text):
 
 def get_healthier_alternatives(product, conditions, current_score, max_retries=3):
     """
-    Call OpenRouter API and return 3 healthier product alternatives.
+    Call Grok API and return 3 healthier product alternatives.
     Includes retry logic for Rate Limits (429) and Network issues.
     """
-    api_key_str = getattr(settings, 'OPENROUTER_API_KEY', os.getenv('OPENROUTER_API_KEY'))
+    api_key_str = getattr(settings, 'GROK_API_KEY', os.getenv('GROK_API_KEY'))
     if not api_key_str:
-        return {'alternatives': [], 'error': 'API_KEY_INVALID: Please add OPENROUTER_API_KEY in .env'}
+        return {'alternatives': [], 'error': 'API_KEY_INVALID: Please add GROK_API_KEY in .env'}
 
-    # Allow easy swap of models in settings (default to the free one for now)
-    model_name = getattr(settings, 'OPENROUTER_API_MODEL', 'mistralai/mistral-7b-instruct-v0.2:free')
+    # Use grok-2-latest model by default
+    model_name = getattr(settings, 'GROK_API_MODEL', 'grok-2-latest')
 
     client = OpenAI(
-        base_url="https://openrouter.ai/api/v1",
+        base_url="https://api.x.ai/v1",
         api_key=api_key_str,
     )
 
@@ -184,7 +184,7 @@ def get_healthier_alternatives(product, conditions, current_score, max_retries=3
     last_error = None
     for attempt in range(max_retries):
         try:
-            logger.info(f"Trying OpenRouter model: {model_name} (Attempt {attempt + 1}/{max_retries})")
+            logger.info(f"Trying Grok model: {model_name} (Attempt {attempt + 1}/{max_retries})")
             
             response = client.chat.completions.create(
                 model=model_name,
@@ -247,7 +247,7 @@ def get_healthier_alternatives(product, conditions, current_score, max_retries=3
         except APIStatusError as e:
             # Other 4xx/5xx errors (e.g., 500, 401)
             status_code = e.status_code
-            logger.error(f"OpenRouter API Error {status_code}: {str(e)}")
+            logger.error(f"Grok API Error {status_code}: {str(e)}")
             # Do not retry on 4xx Client errors except 429
             if 400 <= status_code < 500 and status_code != 429:
                 return {'alternatives': [], 'error': f'API Client Error {status_code}: {str(e)}'}
