@@ -91,3 +91,12 @@ class Order(models.Model):
 
     class Meta:
         db_table = 'orders'
+
+class SuggestionCache(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    health_conditions_hash = models.CharField(max_length=255, db_index=True)
+    suggestions = models.JSONField(default=list)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = 'suggestion_cache'

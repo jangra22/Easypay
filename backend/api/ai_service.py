@@ -37,7 +37,17 @@ def get_healthier_alternatives(product, conditions, current_score):
         if isinstance(i, dict) and i.get('type') == 'harmful'
     ]
     
+    # Generate a hash for the health conditions
+    conditions_list = sorted(conditions) if conditions else []
+    conditions_hash = ','.join(conditions_list).lower()
     conditions_str = ', '.join(conditions) if conditions else 'none'
+
+    # Check Cache
+    from .models import SuggestionCache
+    cached = SuggestionCache.objects.filter(product=product, health_conditions_hash=conditions_hash).first()
+    if cached:
+        logger.info("Serving suggestions from DB Cache")
+        return {'alternatives': cached.suggestions, 'error': None}
 
     # Simple paragraph prompt as requested
     prompt = (
@@ -79,6 +89,17 @@ def get_healthier_alternatives(product, conditions, current_score):
             # Validate basic structure
             validated = [item for item in alternatives if isinstance(item, dict) and 'name' in item and 'brand' in item]
             if validated:
+                # Save to cache
+                from .models import SuggestionCache
+                try:
+                    SuggestionCache.objects.create(
+                        product=product,
+                        health_conditions_hash=conditions_hash,
+                        suggestions=validated
+                    )
+                except Exception as db_e:
+                    logger.error(f"Failed to cache suggestions: {db_e}")
+                
                 return {'alternatives': validated, 'error': None}
                 
         return {'alternatives': [], 'error': 'AI response could not be parsed as valid JSON array.'}
