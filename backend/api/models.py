@@ -80,6 +80,7 @@ class Order(models.Model):
     items = models.JSONField(default=list)  
     subtotal = models.FloatField(default=0.00)
     discount = models.FloatField(default=0.00)
+    gst = models.FloatField(default=0.00)
     total = models.FloatField(default=0.00)
     coupon_code = models.CharField(max_length=50, blank=True, null=True)
     payment_status = models.CharField(max_length=20, default='completed')

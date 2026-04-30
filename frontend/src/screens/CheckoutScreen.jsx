@@ -34,7 +34,7 @@ function CheckoutScreen() {
   const handleApplyCoupon = async () => {
     if (!couponCode) return;
     try {
-      const data = await api.validateCoupon(couponCode);
+      const data = await api.validateCoupon(couponCode, user?.email);
       if (data.valid) {
         setAppliedCoupon(couponCode);
         const discAmount = data.discount_type === 'percentage' 
@@ -44,7 +44,7 @@ function CheckoutScreen() {
         setError(null);
       }
     } catch (err) {
-      setError('Invalid or expired coupon code');
+      setError(err.message || 'Invalid or expired coupon code');
     }
   };
 
@@ -68,7 +68,9 @@ function CheckoutScreen() {
       return;
     }
 
-    const currentTotalFinal = cart.total - discount;
+    const netAmount = cart.total - discount;
+    const gstAmount = netAmount * 0.18;
+    const currentTotalFinal = netAmount + gstAmount;
     const amountInPaise = Math.round(currentTotalFinal * 100);
 
     const options = {
@@ -76,7 +78,7 @@ function CheckoutScreen() {
       amount: amountInPaise.toString(),
       currency: "INR",
       name: "EasyPay Self-Checkout",
-      description: "Demo Payment",
+      description: "Demo Payment (Inc. 18% GST)",
       handler: async function (response) {
         try {
           const order = await api.createOrder(appliedCoupon, user?.email);
@@ -117,7 +119,9 @@ function CheckoutScreen() {
   
   if (!cart) return <div className="p-12 text-center text-danger font-medium mt-safe">Error loading checkout details.</div>;
 
-  const totalFinal = cart.total - discount;
+  const netAmount = cart.total - discount;
+  const gstAmount = netAmount * 0.18;
+  const totalFinal = netAmount + gstAmount;
 
   return (
     <div className="w-full max-w-7xl mx-auto p-4 animate-in fade-in duration-300 pb-32">
@@ -161,8 +165,13 @@ function CheckoutScreen() {
             </div>
           )}
           
+          <div className="flex justify-between items-center text-sm text-gray-500">
+            <span className="font-medium">GST (18%)</span>
+            <span className="font-bold text-gray-900">₹{gstAmount.toFixed(2)}</span>
+          </div>
+          
           <div className="flex justify-between items-center text-xl font-black pt-4 mt-2 border-t border-gray-100">
-            <span className="text-gray-900">Total</span>
+            <span className="text-gray-900">Grand Total</span>
             <span className="text-primary tracking-tight">₹{totalFinal.toFixed(2)}</span>
           </div>
         </div>

@@ -247,8 +247,20 @@ class ClearCartView(APIView):
 class ValidateCouponView(APIView):
     def post(self, request):
         code = request.data.get('code', '').strip().upper()
+        user_email = request.data.get('user_email')
+
         try:
             coupon = Coupon.objects.get(code=code, active=True)
+            
+            # First order check for WELCOME50
+            if code == 'WELCOME50' and user_email:
+                try:
+                    user = AppUser.objects.get(email=user_email)
+                    if Order.objects.filter(user=user).exists():
+                        return Response({'valid': False, 'error': 'WELCOME50 is applicable on first order only.'}, status=400)
+                except AppUser.DoesNotExist:
+                    pass
+
             return Response({
                 'valid': True,
                 'discount_type': coupon.discount_type,
@@ -305,7 +317,10 @@ class CreateOrderView(APIView):
                 except Coupon.DoesNotExist:
                     pass
             
-            total = subtotal - discount
+            total_after_discount = subtotal - discount
+            gst = total_after_discount * 0.18
+            total = total_after_discount + gst
+            
             order = Order.objects.create(
                 order_id=uuid.uuid4(),
                 session_id=session_id,
@@ -313,6 +328,7 @@ class CreateOrderView(APIView):
                 items=order_items,
                 subtotal=subtotal,
                 discount=discount,
+                gst=gst,
                 total=total,
                 coupon_code=coupon_code
             )
@@ -326,6 +342,7 @@ class CreateOrderView(APIView):
             return Response({
                 'order_id': str(order.order_id),
                 'total': float(order.total),
+                'gst': float(order.gst),
                 'qr_code': order.qr_code
             }, status=201)
             

@@ -117,11 +117,11 @@ export const api = {
   },
 
   // --- Checkout ---
-  async validateCoupon(code) {
+  async validateCoupon(code, userEmail = null) {
     const res = await fetch(`${BASE_URL}/coupon/validate/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code }),
+      body: JSON.stringify({ code, user_email: userEmail }),
       credentials: "include",
     });
     if (!res.ok) throw new Error("Invalid coupon");
