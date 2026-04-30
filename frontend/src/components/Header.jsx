@@ -1,10 +1,35 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, MapPin } from 'lucide-react';
 
 function Header() {
   const location = useLocation();
   const navigate = useNavigate();
+  const [locationName, setLocationName] = useState('Andheri West');
+
+  useEffect(() => {
+    // Only fetch location if we are on the homepage
+    if (location.pathname === '/') {
+      if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(async (position) => {
+          try {
+            const { latitude, longitude } = position.coords;
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=14`);
+            const data = await res.json();
+            
+            // Try to get a meaningful name from the address
+            const addr = data.address;
+            const neighborhood = addr.suburb || addr.neighbourhood || addr.residential || addr.city_district || addr.city || 'My Location';
+            setLocationName(neighborhood);
+          } catch (err) {
+            console.error("Failed to fetch location name:", err);
+          }
+        }, (err) => {
+          console.log("Geolocation permission denied or error:", err);
+        });
+      }
+    }
+  }, [location.pathname]);
 
   // Define screen titles based on routes
   const getRouteInfo = (path) => {
@@ -47,8 +72,8 @@ function Header() {
              <div className="flex flex-col leading-tight">
                <span className="font-bold text-gray-900 leading-none">JioMart</span>
                <span className="text-xs text-gray-500 flex items-center gap-1">
-                 <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
-                 Andheri West
+                 <MapPin size={10} className="text-primary fill-primary/20" />
+                 {locationName}
                </span>
              </div>
            </div>
@@ -61,4 +86,5 @@ function Header() {
 }
 
 export default Header;
+
 
