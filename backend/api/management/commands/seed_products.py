@@ -17,7 +17,7 @@ class Command(BaseCommand):
                 'category': 'instant_food',
                 'emoji': '🍜',
                 'base_score': 28,
-                'price': 0.00,
+                'price': 14.00,
                 'ingredients': [
                     {'name': 'Maida (Refined Wheat Flour)', 'type': 'harmful', 'severity': 'high',
                      'reason': 'Highly refined flour with no fiber, causes blood sugar spikes'},
@@ -42,7 +42,7 @@ class Command(BaseCommand):
                 'category': 'snack',
                 'emoji': '🍟',
                 'base_score': 22,
-                'price': 0.00,
+                'price': 20.00,
                 'ingredients': [
                     {'name': 'Potatoes', 'type': 'neutral', 'severity': 'low', 'reason': 'Natural base'},
                     {'name': 'Refined Vegetable Oil', 'type': 'harmful', 'severity': 'high',
@@ -61,7 +61,7 @@ class Command(BaseCommand):
                 'category': 'beverage',
                 'emoji': '🧃',
                 'base_score': 38,
-                'price': 0.00,
+                'price': 110.00,
                 'ingredients': [
                     {'name': 'Added Sugar', 'type': 'harmful', 'severity': 'high',
                      'reason': 'High added sugar'},
@@ -80,7 +80,7 @@ class Command(BaseCommand):
                 'category': 'beverage',
                 'emoji': '🥤',
                 'base_score': 12,
-                'price': 0.00,
+                'price': 40.00,
                 'ingredients': [
                     {'name': 'Carbonated Water', 'type': 'neutral', 'severity': 'low', 'reason': 'Base'},
                     {'name': 'High Fructose Corn Syrup', 'type': 'harmful', 'severity': 'high', 'reason': 'Pure liquid sugar, weight gain'},
@@ -100,7 +100,7 @@ class Command(BaseCommand):
                 'category': 'spread',
                 'emoji': '🍓',
                 'base_score': 32,
-                'price': 0.00,
+                'price': 150.00,
                 'ingredients': [
                     {'name': 'Sugar', 'type': 'harmful', 'severity': 'high', 'reason': 'Extremely high sugar content'},
                     {'name': 'Mixed Fruit Pulp', 'type': 'beneficial', 'severity': 'medium', 'reason': 'Fruit content'},
@@ -119,7 +119,7 @@ class Command(BaseCommand):
                 'category': 'dairy',
                 'emoji': '🧈',
                 'base_score': 45,
-                'price': 0.00,
+                'price': 58.00,
                 'ingredients': [
                     {'name': 'Milk Fat', 'type': 'neutral', 'severity': 'medium', 'reason': 'Pure dairy fat'},
                     {'name': 'Common Salt', 'type': 'harmful', 'severity': 'medium', 'reason': 'High sodium content'},
@@ -137,7 +137,7 @@ class Command(BaseCommand):
                 'category': 'cereal',
                 'emoji': '🥣',
                 'base_score': 58,
-                'price': 0.00,
+                'price': 105.00,
                 'ingredients': [
                     {'name': 'Corn Scrit', 'type': 'neutral', 'severity': 'low', 'reason': 'Base grain'},
                     {'name': 'Sugar', 'type': 'harmful', 'severity': 'medium', 'reason': 'Added sugar for taste'},
@@ -157,7 +157,7 @@ class Command(BaseCommand):
                 'category': 'chocolate',
                 'emoji': '🍫',
                 'base_score': 25,
-                'price': 0.00,
+                'price': 45.00,
                 'ingredients': [
                     {'name': 'Sugar', 'type': 'harmful', 'severity': 'high', 'reason': 'Primary ingredient is sugar'},
                     {'name': 'Milk Solids', 'type': 'neutral', 'severity': 'low', 'reason': 'Dairy base'},
@@ -177,7 +177,7 @@ class Command(BaseCommand):
                 'category': 'beverage',
                 'emoji': '🥛',
                 'base_score': 65,
-                'price': 0.00,
+                'price': 260.00,
                 'ingredients': [
                     {'name': 'Malted Barley', 'type': 'beneficial', 'severity': 'high', 'reason': 'Rich in vitamins'},
                     {'name': 'Wheat Flour', 'type': 'neutral', 'severity': 'low', 'reason': 'Base'},
@@ -197,7 +197,7 @@ class Command(BaseCommand):
                 'category': 'spread',
                 'emoji': '🧂',
                 'base_score': 30,
-                'price': 0.00,
+                'price': 28.00,
                 'ingredients': [
                     {'name': 'Iodized Salt', 'type': 'harmful', 'severity': 'high', 'reason': 'High sodium intake risk'},
                     {'name': 'Potassium Iodate', 'type': 'beneficial', 'severity': 'low', 'reason': 'Iodine source'},
@@ -215,7 +215,7 @@ class Command(BaseCommand):
                 'category': 'spread',
                 'emoji': '🍯',
                 'base_score': 74,
-                'price': 0.00,
+                'price': 125.00,
                 'ingredients': [
                     {'name': 'Pure Honey', 'type': 'beneficial', 'severity': 'high', 'reason': 'Natural sweetener, antibacterial properties'}
                 ],
@@ -231,7 +231,7 @@ class Command(BaseCommand):
                 'category': 'dairy',
                 'emoji': '🌿',
                 'base_score': 88,
-                'price': 0.00,
+                'price': 165.00,
                 'ingredients': [
                     {'name': 'Neem Extract', 'type': 'beneficial', 'severity': 'high', 'reason': 'Blood purifier, anti-microbial'}
                 ],
@@ -247,7 +247,7 @@ class Command(BaseCommand):
                 'category': 'snack',
                 'emoji': '🍪',
                 'base_score': 35,
-                'price': 0.00,
+                'price': 30.00,
                 'ingredients': [
                     {'name': 'Wheat Flour', 'type': 'neutral', 'severity': 'low', 'reason': 'Base'},
                     {'name': 'Sugar', 'type': 'harmful', 'severity': 'high', 'reason': 'High added sugar'},
