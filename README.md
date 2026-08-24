@@ -1,6 +1,6 @@
-# HealthScan 🥗
+# EasyPay 🛒
 
-HealthScan is a full-stack AI-powered application designed to help users analyze food products based on their personalized health profiles. It provides deep ingredient analysis, health scoring, and AI-driven healthier alternatives.
+EasyPay is a full-stack AI-powered Scan & Go supermarket app. Customers scan product barcodes with their phone, build a digital cart, pay instantly via Razorpay, and exit with a digital QR pass — no cashier, no queue. Includes an AI health analysis layer powered by Google Gemini.
 
 ## 🚀 Quick Start
 
@@ -22,7 +22,7 @@ Create a `.env` file in the `backend/` directory:
 SECRET_KEY=your-django-secret-key
 DEBUG=True
 GEMINI_API_KEY=your-google-gemini-api-key
-MONGODB_URL=mongodb+srv://<user>:<password>@cluster.mongodb.net/healthscan_db
+MONGODB_URL=mongodb+srv/<user>:<password>@cluster.mongodb.net/easypay_db
 ```
 
 **Run Migrations & Start Server:**
@@ -53,17 +53,19 @@ The frontend will be available at `http://localhost:5173`.
 
 ## ✨ Key Features
 
-- **Personalized Health Scoring**: Enter your health conditions (e.g., Diabetes, Hypertension) to get a tailormade health score for every product.
-- **Instant Barcode Scanning**: Use your camera to scan product barcodes in real-time, now with **Mirror Mode** and **Image Upload**.
-- **Auto-Import Engine**: Automatically fetches and creates product data from **OpenFoodFacts** if not already in the database.
-- **AI Healthier Alternatives**: Powered by **Google Gemini**, suggests better food choices available in the Indian market.
-- **Cloud-Native Architecture**: Fully migrated to **MongoDB Atlas** for scalable, high-performance data storage.
-- **Fully Responsive Dashboard**: A premium look on desktop with a multi-column dashboard, while remaining perfectly functional on mobile.
+- **Scan & Go Checkout**: Scan products in-store, pay via Razorpay, and exit with a digital QR receipt — zero queues.
+- **Guard Verification Portal**: Security guards scan customer exit QR codes to verify purchases at the gate.
+- **Admin Dashboard**: Real-time sales analytics, revenue tracking, guard activity, and inventory management.
+- **AI Health Analysis**: Personalized 0–100 health score per product based on your medical conditions (Diabetes, BP, etc.).
+- **Google Gemini Alternatives**: AI-suggested healthier product alternatives in the Indian market.
+- **Auto-Import Engine**: Automatically fetches product data from OpenFoodFacts for unknown barcodes.
+- **Cloud-Native Architecture**: MongoDB Atlas for scalable, high-performance data storage.
 
 ## 🛠 Tech Stack
 
 - **Frontend**: React.js, Tailwind CSS, Framer Motion, Lucide Icons.
 - **Backend**: Django 6.x, Django REST Framework.
+- **Payments**: Razorpay (UPI, Card, NetBanking).
 - **Database**: MongoDB Atlas (NoSQL Cloud).
 - **AI**: Google Gemini Pro (Generative AI).
 - **Scanner**: @zxing/library for barcode detection.
@@ -78,4 +80,4 @@ python manage.py seed_products
 
 ---
 
-_Developed with ❤️ for Health and Transparency._
+_Built for the Razorpay Buildathon 2026. Developed with ❤️ by Ritik Jangra._

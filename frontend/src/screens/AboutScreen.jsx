@@ -27,14 +27,14 @@ const AboutScreen = ({ onBack }) => {
                >
                   <ShieldCheck size={48} />
                </motion.div>
-               <h2 className="text-5xl font-black text-gray-900 tracking-tighter mb-2">Health<span className="text-primary-500">Scan</span></h2>
+               <h2 className="text-5xl font-black text-gray-900 tracking-tighter mb-2">Easy<span className="text-primary-500">Pay</span></h2>
                <p className="text-gray-400 font-black text-sm uppercase tracking-[0.3em]">Version 1.0.0 Alpha</p>
             </div>
 
             <section className="space-y-6">
                <h3 className="text-2xl font-black text-gray-900 tracking-tight uppercase border-l-4 border-primary-500 pl-6">Our Mission</h3>
                <p className="text-gray-500 text-lg font-medium leading-relaxed">
-                 HealthScan aims to bring radical transparency to the food industry. We believe everyone has the right to know exactly what they are consuming and how it affects their unique biological needs.
+                 EasyPay aims to make supermarket shopping faster, smarter, and healthier. We believe everyone deserves a seamless checkout experience and the right to know exactly what they are consuming.
                </p>
             </section>
 
@@ -87,7 +87,7 @@ const AboutScreen = ({ onBack }) => {
                   <span>Medical Disclaimer</span>
                </h3>
                <p className="text-gray-400 text-xs leading-relaxed font-medium italic">
-                 HealthScan is for informational purposes only. It is not a substitute for professional medical advice, diagnosis, or treatment. Always consult with a qualified healthcare provider regarding your health conditions.
+                 EasyPay's health analysis feature is for informational purposes only. It is not a substitute for professional medical advice, diagnosis, or treatment. Always consult with a qualified healthcare provider regarding your health conditions.
                </p>
             </section>
           </div>
