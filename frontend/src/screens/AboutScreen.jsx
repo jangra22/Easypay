@@ -74,7 +74,7 @@ const AboutScreen = ({ onBack }) => {
                      <div className="w-12 h-12 rounded-2xl bg-white shadow-sm border border-gray-100 text-primary-600 flex items-center justify-center text-lg font-black shrink-0 group-hover:bg-primary-500 group-hover:text-white transition-all">3</div>
                      <div>
                         <h4 className="font-black text-gray-900 uppercase tracking-widest text-xs mb-1">AI Recommendation</h4>
-                        <p className="text-gray-500 text-sm font-medium leading-relaxed">Advanced inference using Google Gemini to suggest healthier market alternatives.</p>
+                        <p className="text-gray-500 text-sm font-medium leading-relaxed">Ultra-fast inference using Groq AI to suggest healthier market alternatives.</p>
                      </div>
                   </div>
                </div>

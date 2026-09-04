@@ -18,7 +18,7 @@ class Command(BaseCommand):
                 'discount_type': 'percentage',
                 'discount_value': 20.0,
                 'active': True,
-            },
+            }
         ]
 
         for data in coupons:

@@ -8,8 +8,22 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 def extract_json(text):
-    """Safely extract a JSON array from a string."""
+    """Safely extract a JSON array from a string, handling markdown and raw text."""
+    if not text:
+        return None
     try:
+        # Strip potential markdown formatting
+        cleaned = re.sub(r'```(?:json)?\s*', '', text)
+        cleaned = re.sub(r'```', '', cleaned).strip()
+        
+        # Try direct parse
+        try:
+            parsed = json.loads(cleaned)
+            if isinstance(parsed, list):
+                return parsed
+        except Exception:
+            pass
+
         # Find the first '[' and last ']'
         start = text.find('[')
         end = text.rfind(']')
@@ -22,13 +36,19 @@ def extract_json(text):
 
 def get_healthier_alternatives(product, conditions, current_score):
     """
-    Call Gemini API and return 3 healthier product alternatives.
+    Call Groq API and return 3 healthier product alternatives.
     """
-    api_key = getattr(settings, 'GEMINI_API_KEY', os.getenv('GEMINI_API_KEY'))
-    if not api_key:
-        return {'alternatives': [], 'error': 'API_KEY_INVALID: Please add GEMINI_API_KEY in .env'}
+    api_key = (
+        getattr(settings, 'GROQ_API_KEY', None)
+        or os.getenv('groq_api')
+        or os.getenv('GROQ_API_KEY')
+        or os.getenv('GROK_API_KEY')
+        or getattr(settings, 'GEMINI_API_KEY', None)
+        or os.getenv('GEMINI_API_KEY')
+    )
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={api_key}"
+    if not api_key:
+        return {'alternatives': [], 'error': 'API_KEY_INVALID: Please add groq_api (or GROQ_API_KEY) in .env'}
 
     # Prepare ingredients text safely
     ingredients = product.ingredients if isinstance(product.ingredients, list) else []
@@ -44,53 +64,81 @@ def get_healthier_alternatives(product, conditions, current_score):
 
     # Check Cache
     from .models import SuggestionCache
-    cached = SuggestionCache.objects.filter(product=product, health_conditions_hash=conditions_hash).first()
-    if cached:
-        logger.info("Serving suggestions from DB Cache")
-        return {'alternatives': cached.suggestions, 'error': None}
+    try:
+        cached = SuggestionCache.objects.filter(product=product, health_conditions_hash=conditions_hash).first()
+        if cached:
+            logger.info("Serving suggestions from DB Cache")
+            return {'alternatives': cached.suggestions, 'error': None}
+    except Exception as e:
+        logger.warning(f"Cache check error: {e}")
 
-    # Simple paragraph prompt as requested
+    # Prompt
     prompt = (
-        f"Act as a nutritionist. Suggest exactly 3 healthier food alternatives to '{product.name} ({product.brand})' "
+        f"Act as a nutritionist. Suggest exactly 3 healthier food alternatives available in the market to replace '{product.name} ({product.brand})' "
         f"in the category '{product.category}'. The user has these health conditions: {conditions_str}. "
-        f"The original product contains these bad ingredients: {', '.join(harmful_ings) if harmful_ings else 'none'}. "
+        f"The original product contains these harmful ingredients: {', '.join(harmful_ings) if harmful_ings else 'none'}. "
         f"The original product score is {current_score} out of 100. Find products with a higher score. "
-        f"You MUST reply with ONLY a valid JSON array. Do not add any greeting or markdown formatting. "
-        f"Use this exact structure: [ {{\"name\": \"Name\", \"brand\": \"Brand\", \"why_healthier\": \"Reason\", \"estimated_score\": 90}} ]"
+        f"You MUST reply with ONLY a valid JSON array. Do not add any greeting, markdown formatting, or text outside the JSON. "
+        f"Use this exact structure: [ {{\"name\": \"Product Name\", \"brand\": \"Brand Name\", \"why_healthier\": \"Reason why it is healthier\", \"estimated_score\": 90}} ]"
     )
 
+    # Groq OpenAI-compatible Chat Completions endpoint
+    groq_url = "https://api.groq.com/openai/v1/chat/completions"
+    groq_model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+
     payload = {
-        "contents": [{
-            "parts": [{"text": prompt}]
-        }],
-        "generationConfig": {
-            "temperature": 0.2
-        }
+        "model": groq_model,
+        "messages": [
+            {
+                "role": "system",
+                "content": "You are a professional clinical nutritionist. You respond ONLY with raw JSON arrays without markdown wrappers."
+            },
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        "temperature": 0.3,
+        "max_tokens": 1024,
+        "top_p": 1
     }
 
     try:
-        logger.info("Calling Gemini API...")
-        response = requests.post(url, json=payload, headers={"Content-Type": "application/json"})
+        logger.info(f"Calling Groq API with model {groq_model}...")
+        response = requests.post(groq_url, json=payload, headers=headers, timeout=15)
+        
+        # If model is not found or fails, try fallback to llama-3.1-8b-instant
+        if response.status_code == 404 or response.status_code == 400:
+            fallback_models = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"]
+            for fb_model in fallback_models:
+                if fb_model != groq_model:
+                    logger.info(f"Retrying Groq API with fallback model {fb_model}...")
+                    payload["model"] = fb_model
+                    response = requests.post(groq_url, json=payload, headers=headers, timeout=15)
+                    if response.status_code == 200:
+                        break
+
         response.raise_for_status()
         
         data = response.json()
-        raw_text = data.get('candidates', [{}])[0].get('content', {}).get('parts', [{}])[0].get('text', '')
+        raw_text = data.get('choices', [{}])[0].get('message', {}).get('content', '')
         
         if not raw_text:
             return {'alternatives': [], 'error': 'AI returned an empty response.'}
             
         # Parse JSON
-        try:
-            alternatives = json.loads(raw_text)
-        except json.JSONDecodeError:
-            alternatives = extract_json(raw_text)
+        alternatives = extract_json(raw_text)
             
         if isinstance(alternatives, list) and len(alternatives) > 0:
             # Validate basic structure
             validated = [item for item in alternatives if isinstance(item, dict) and 'name' in item and 'brand' in item]
             if validated:
                 # Save to cache
-                from .models import SuggestionCache
                 try:
                     SuggestionCache.objects.create(
                         product=product,
@@ -105,5 +153,5 @@ def get_healthier_alternatives(product, conditions, current_score):
         return {'alternatives': [], 'error': 'AI response could not be parsed as valid JSON array.'}
 
     except Exception as e:
-        logger.exception("Gemini API Error")
+        logger.exception("Groq API Error")
         return {'alternatives': [], 'error': f'AI service error: {str(e)}'}
