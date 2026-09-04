@@ -140,15 +140,17 @@ def get_healthier_alternatives(product, conditions, current_score):
         "messages": [
             {
                 "role": "system",
-                "content": "You are a professional clinical nutritionist. You respond ONLY with raw JSON arrays without markdown wrappers."
+                "content": "You are a clinical nutritionist. Return a JSON object with a key 'alternatives' containing exactly 3 healthier food alternatives."
             },
             {
                 "role": "user",
                 "content": prompt
             }
         ],
-        "temperature": 0.6,
-        "max_tokens": 1024,
+        "response_format": {"type": "json_object"},
+        "reasoning_effort": "none",
+        "temperature": 0.3,
+        "max_completion_tokens": 500,
         "top_p": 0.95
     }
 
