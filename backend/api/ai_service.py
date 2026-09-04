@@ -8,12 +8,15 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 def extract_json(text):
-    """Safely extract a JSON array from a string, handling markdown and raw text."""
+    """Safely extract a JSON array from a string, handling thinking tags, markdown and raw text."""
     if not text:
         return None
     try:
+        # Strip reasoning / thinking tags if present (e.g. from Qwen or reasoning models)
+        cleaned = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
+        
         # Strip potential markdown formatting
-        cleaned = re.sub(r'```(?:json)?\s*', '', text)
+        cleaned = re.sub(r'```(?:json)?\s*', '', cleaned)
         cleaned = re.sub(r'```', '', cleaned).strip()
         
         # Try direct parse
@@ -25,10 +28,10 @@ def extract_json(text):
             pass
 
         # Find the first '[' and last ']'
-        start = text.find('[')
-        end = text.rfind(']')
+        start = cleaned.find('[')
+        end = cleaned.rfind(']')
         if start != -1 and end != -1 and end > start:
-            json_str = text[start:end + 1]
+            json_str = cleaned[start:end + 1]
             return json.loads(json_str)
     except Exception:
         pass
@@ -84,7 +87,7 @@ def get_healthier_alternatives(product, conditions, current_score):
 
     # Groq OpenAI-compatible Chat Completions endpoint
     groq_url = "https://api.groq.com/openai/v1/chat/completions"
-    groq_model = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
+    groq_model = os.getenv("GROQ_MODEL", "qwen/qwen3.6-27b")
 
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -103,23 +106,23 @@ def get_healthier_alternatives(product, conditions, current_score):
                 "content": prompt
             }
         ],
-        "temperature": 0.7,
-        "max_tokens": 1024,
-        "top_p": 1
+        "temperature": 0.6,
+        "max_completion_tokens": 2048,
+        "top_p": 0.95
     }
 
     try:
         logger.info(f"Calling Groq API with model {groq_model}...")
-        response = requests.post(groq_url, json=payload, headers=headers, timeout=15)
+        response = requests.post(groq_url, json=payload, headers=headers, timeout=20)
         
-        # If model is not found or fails, try fallback to active account models
-        if response.status_code == 404 or response.status_code == 400:
+        # If model is rate-limited (429) or not found (404/400), try fallback models
+        if response.status_code in [429, 404, 400]:
             fallback_models = ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b", "groq/compound-mini"]
             for fb_model in fallback_models:
                 if fb_model != payload["model"]:
                     logger.info(f"Retrying Groq API with fallback model {fb_model}...")
                     payload["model"] = fb_model
-                    response = requests.post(groq_url, json=payload, headers=headers, timeout=15)
+                    response = requests.post(groq_url, json=payload, headers=headers, timeout=20)
                     if response.status_code == 200:
                         break
 
