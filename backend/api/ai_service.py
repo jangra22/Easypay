@@ -5,6 +5,11 @@ import requests
 import re
 from django.conf import settings
 
+try:
+    from groq import Groq
+except ImportError:
+    Groq = None
+
 logger = logging.getLogger(__name__)
 
 def extract_json(text):
@@ -80,7 +85,7 @@ def extract_json(text):
 
 def get_healthier_alternatives(product, conditions, current_score):
     """
-    Call Groq API exactly ONCE and return 3 healthier product alternatives.
+    Call Groq API using official Groq Python SDK and return 3 healthier product alternatives.
     """
     api_key = (
         getattr(settings, 'GROQ_API_KEY', None)
@@ -122,49 +127,65 @@ def get_healthier_alternatives(product, conditions, current_score):
         f"in the category '{product.category}'. The user has these health conditions: {conditions_str}. "
         f"The original product contains these harmful ingredients: {', '.join(harmful_ings) if harmful_ings else 'none'}. "
         f"The original product score is {current_score} out of 100. Find products with a higher score. "
-        f"You MUST reply with ONLY a valid JSON array. Do not add any greeting, markdown formatting, or text outside the JSON. "
-        f"Use this exact structure: [ {{\"name\": \"Product Name\", \"brand\": \"Brand Name\", \"why_healthier\": \"Reason why it is healthier\", \"estimated_score\": 90}} ]"
+        f"You MUST reply with a JSON object containing key 'alternatives' with array of items. "
+        f"Use this exact structure: {{\"alternatives\": [ {{\"name\": \"Product Name\", \"brand\": \"Brand Name\", \"why_healthier\": \"Reason why it is healthier\", \"estimated_score\": 90}} ]}}"
     )
 
-    # Groq OpenAI-compatible Chat Completions endpoint
-    groq_url = "https://api.groq.com/openai/v1/chat/completions"
-    groq_model = os.getenv("GROQ_MODEL", "qwen/qwen3.6-27b")
-
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
-    }
-
-    payload = {
-        "model": groq_model,
-        "messages": [
-            {
-                "role": "system",
-                "content": "You are a clinical nutritionist. Return a JSON object with a key 'alternatives' containing exactly 3 healthier food alternatives."
-            },
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ],
-        "response_format": {"type": "json_object"},
-        "reasoning_effort": "none",
-        "temperature": 0.3,
-        "max_completion_tokens": 500,
-        "top_p": 0.95
-    }
+    groq_model = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
 
     try:
-        logger.info(f"Calling Groq API (single request) with model {groq_model}...")
-        response = requests.post(groq_url, json=payload, headers=headers, timeout=15)
-        
-        if response.status_code != 200:
-            logger.error(f"Groq API error {response.status_code}: {response.text}")
-            return {'alternatives': [], 'error': f'Groq API error ({response.status_code}): {response.text[:120]}'}
+        logger.info(f"Calling Groq SDK (single request) with model {groq_model}...")
+        raw_text = ""
 
-        data = response.json()
-        raw_text = data.get('choices', [{}])[0].get('message', {}).get('content', '')
-        
+        if Groq is not None:
+            client = Groq(api_key=api_key)
+            completion = client.chat.completions.create(
+                model=groq_model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a clinical nutritionist. Return a JSON object with a key 'alternatives' containing exactly 3 healthier food alternatives."
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.7,
+                max_completion_tokens=1024,
+                top_p=1,
+                reasoning_effort="medium" if "gpt-oss" in groq_model else "none",
+            )
+            raw_text = completion.choices[0].message.content or ""
+        else:
+            # Fallback to direct HTTP request
+            groq_url = "https://api.groq.com/openai/v1/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "model": groq_model,
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": "You are a clinical nutritionist. Return a JSON object with a key 'alternatives' containing exactly 3 healthier food alternatives."
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                "response_format": {"type": "json_object"},
+                "temperature": 0.7,
+                "max_completion_tokens": 1024,
+                "top_p": 1
+            }
+            res = requests.post(groq_url, json=payload, headers=headers, timeout=15)
+            res.raise_for_status()
+            raw_text = res.json().get('choices', [{}])[0].get('message', {}).get('content', '')
+
         if not raw_text:
             return {'alternatives': [], 'error': 'AI returned an empty response.'}
 
@@ -173,8 +194,17 @@ def get_healthier_alternatives(product, conditions, current_score):
             
         if isinstance(alternatives, list) and len(alternatives) > 0:
             # Validate basic structure
-            validated = [item for item in alternatives if isinstance(item, dict) and 'name' in item and 'brand' in item]
+            validated = [item for item in alternatives if isinstance(item, dict) and 'name' in item]
             if validated:
+                # Ensure all required keys exist
+                for item in validated:
+                    if 'brand' not in item:
+                        item['brand'] = item.get('brand_name', 'Generic Health Brand')
+                    if 'why_healthier' not in item:
+                        item['why_healthier'] = item.get('benefit', item.get('reason', 'Nutrient-rich healthy alternative'))
+                    if 'estimated_score' not in item:
+                        item['estimated_score'] = 85
+
                 # Save to cache so future lookups take 0 API calls
                 try:
                     SuggestionCache.objects.create(
