@@ -80,7 +80,7 @@ def extract_json(text):
 
 def get_healthier_alternatives(product, conditions, current_score):
     """
-    Call Groq API and return 3 healthier product alternatives.
+    Call Groq API exactly ONCE and return 3 healthier product alternatives.
     """
     api_key = (
         getattr(settings, 'GROQ_API_KEY', None)
@@ -106,12 +106,12 @@ def get_healthier_alternatives(product, conditions, current_score):
     conditions_hash = ','.join(conditions_list).lower()
     conditions_str = ', '.join(conditions) if conditions else 'none'
 
-    # Check Cache
+    # Check Database Cache first (0 API calls if cached)
     from .models import SuggestionCache
     try:
         cached = SuggestionCache.objects.filter(product=product, health_conditions_hash=conditions_hash).first()
         if cached:
-            logger.info("Serving suggestions from DB Cache")
+            logger.info("Serving suggestions from DB Cache (0 API calls)")
             return {'alternatives': cached.suggestions, 'error': None}
     except Exception as e:
         logger.warning(f"Cache check error: {e}")
@@ -135,71 +135,58 @@ def get_healthier_alternatives(product, conditions, current_score):
         "Content-Type": "application/json"
     }
 
-    # Model candidate list with preferred model first
-    candidate_models = [groq_model]
-    for m in ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b", "groq/compound-mini"]:
-        if m not in candidate_models:
-            candidate_models.append(m)
+    payload = {
+        "model": groq_model,
+        "messages": [
+            {
+                "role": "system",
+                "content": "You are a professional clinical nutritionist. You respond ONLY with raw JSON arrays without markdown wrappers."
+            },
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        "temperature": 0.6,
+        "max_tokens": 1024,
+        "top_p": 0.95
+    }
 
-    last_error = None
-    for model_name in candidate_models:
-        payload = {
-            "model": model_name,
-            "messages": [
-                {
-                    "role": "system",
-                    "content": "You are a professional clinical nutritionist. You respond ONLY with raw JSON arrays without markdown wrappers."
-                },
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
-            "temperature": 0.6,
-            "max_tokens": 1024,
-            "top_p": 0.95
-        }
+    try:
+        logger.info(f"Calling Groq API (single request) with model {groq_model}...")
+        response = requests.post(groq_url, json=payload, headers=headers, timeout=15)
+        
+        if response.status_code != 200:
+            logger.error(f"Groq API error {response.status_code}: {response.text}")
+            return {'alternatives': [], 'error': f'Groq API error ({response.status_code}): {response.text[:120]}'}
 
-        try:
-            logger.info(f"Calling Groq API with model {model_name}...")
-            response = requests.post(groq_url, json=payload, headers=headers, timeout=15)
+        data = response.json()
+        raw_text = data.get('choices', [{}])[0].get('message', {}).get('content', '')
+        
+        if not raw_text:
+            return {'alternatives': [], 'error': 'AI returned an empty response.'}
+
+        # Parse JSON
+        alternatives = extract_json(raw_text)
             
-            if response.status_code != 200:
-                logger.warning(f"Groq API ({model_name}) error {response.status_code}: {response.text}")
-                last_error = f"Model {model_name} error: {response.text}"
-                continue
-
-            data = response.json()
-            raw_text = data.get('choices', [{}])[0].get('message', {}).get('content', '')
-            
-            if not raw_text:
-                logger.warning(f"Groq API ({model_name}) returned empty text.")
-                continue
-
-            # Parse JSON
-            alternatives = extract_json(raw_text)
+        if isinstance(alternatives, list) and len(alternatives) > 0:
+            # Validate basic structure
+            validated = [item for item in alternatives if isinstance(item, dict) and 'name' in item and 'brand' in item]
+            if validated:
+                # Save to cache so future lookups take 0 API calls
+                try:
+                    SuggestionCache.objects.create(
+                        product=product,
+                        health_conditions_hash=conditions_hash,
+                        suggestions=validated
+                    )
+                except Exception as db_e:
+                    logger.error(f"Failed to cache suggestions: {db_e}")
                 
-            if isinstance(alternatives, list) and len(alternatives) > 0:
-                # Validate basic structure
-                validated = [item for item in alternatives if isinstance(item, dict) and 'name' in item and 'brand' in item]
-                if validated:
-                    # Save to cache
-                    try:
-                        SuggestionCache.objects.create(
-                            product=product,
-                            health_conditions_hash=conditions_hash,
-                            suggestions=validated
-                        )
-                    except Exception as db_e:
-                        logger.error(f"Failed to cache suggestions: {db_e}")
-                    
-                    return {'alternatives': validated, 'error': None}
-            else:
-                logger.warning(f"Failed to parse JSON from {model_name}: {raw_text[:200]}")
+                return {'alternatives': validated, 'error': None}
+        
+        return {'alternatives': [], 'error': 'AI response could not be parsed as valid JSON array.'}
 
-        except Exception as e:
-            logger.exception(f"Groq API call to {model_name} failed: {e}")
-            last_error = str(e)
-            continue
-
-    return {'alternatives': [], 'error': f'AI service error: {last_error or "Could not parse response"}'}
+    except Exception as e:
+        logger.exception(f"Groq API call failed: {e}")
+        return {'alternatives': [], 'error': f'AI service error: {str(e)}'}
