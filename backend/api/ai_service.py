@@ -84,7 +84,7 @@ def get_healthier_alternatives(product, conditions, current_score):
 
     # Groq OpenAI-compatible Chat Completions endpoint
     groq_url = "https://api.groq.com/openai/v1/chat/completions"
-    groq_model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+    groq_model = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
 
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -103,7 +103,7 @@ def get_healthier_alternatives(product, conditions, current_score):
                 "content": prompt
             }
         ],
-        "temperature": 0.3,
+        "temperature": 0.7,
         "max_tokens": 1024,
         "top_p": 1
     }
@@ -112,18 +112,20 @@ def get_healthier_alternatives(product, conditions, current_score):
         logger.info(f"Calling Groq API with model {groq_model}...")
         response = requests.post(groq_url, json=payload, headers=headers, timeout=15)
         
-        # If model is not found or fails, try fallback to llama-3.1-8b-instant
+        # If model is not found or fails, try fallback to active account models
         if response.status_code == 404 or response.status_code == 400:
-            fallback_models = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"]
+            fallback_models = ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b", "groq/compound-mini"]
             for fb_model in fallback_models:
-                if fb_model != groq_model:
+                if fb_model != payload["model"]:
                     logger.info(f"Retrying Groq API with fallback model {fb_model}...")
                     payload["model"] = fb_model
                     response = requests.post(groq_url, json=payload, headers=headers, timeout=15)
                     if response.status_code == 200:
                         break
 
-        response.raise_for_status()
+        if response.status_code != 200:
+            logger.error(f"Groq API returned error status {response.status_code}: {response.text}")
+            response.raise_for_status()
         
         data = response.json()
         raw_text = data.get('choices', [{}])[0].get('message', {}).get('content', '')
