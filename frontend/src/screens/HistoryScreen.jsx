@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Clock, ChevronRight, Receipt, CreditCard, ShoppingBag } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { ArrowLeft, Clock, ChevronRight, Receipt, QrCode, ShoppingBag, ShieldCheck } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -15,7 +15,7 @@ const HistoryScreen = ({ onBack = () => {} }) => {
     const fetchOrders = async () => {
       try {
         const data = await api.getOrders(user?.email);
-        setOrders(data);
+        setOrders(data || []);
       } catch (err) {
         console.error('Failed to fetch orders', err);
       } finally {
@@ -26,93 +26,135 @@ const HistoryScreen = ({ onBack = () => {} }) => {
   }, [user]);
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-80px)] md:min-h-0 bg-gray-bg p-4 md:p-8 animate-in fade-in duration-300 pb-24">
-      {/* Mobile-only Header */}
-      <div className="md:hidden sticky top-0 z-10 flex items-center justify-between mb-6 pt-2">
-        <button onClick={onBack} className="p-2 -ml-2 hover:bg-white rounded-full text-gray-700 transition-colors">
-           <ArrowLeft size={24} />
-        </button>
-        <h1 className="font-bold text-xl text-gray-900 tracking-tight">Purchase History</h1>
-        <div className="w-10"></div>
+    <div className="flex flex-col min-h-full px-4 pt-4 pb-28 animate-fade-in select-none">
+      
+      {/* 1. Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+            Past Transactions
+          </span>
+          <h1 className="font-display font-extrabold text-xl sm:text-2xl text-slate-900 tracking-tight">
+            Digital Exit Passes
+          </h1>
+        </div>
+        <span className="font-display font-bold text-xs bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full">
+          {orders.length} {orders.length === 1 ? 'pass' : 'passes'}
+        </span>
       </div>
 
-      <div className="max-w-4xl mx-auto w-full">
-        {/* Desktop Header */}
-        <div className="hidden md:flex items-center justify-between mb-10">
-          <div className="flex items-center space-x-6">
-            <button onClick={onBack} className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-gray-500 hover:text-primary transition-all border border-gray-100 shadow-sm">
-              <ArrowLeft size={24} />
-            </button>
-            <div>
-              <p className="text-xs font-bold text-primary uppercase tracking-widest mb-1">Billing Overview</p>
-              <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Transaction History</h1>
-            </div>
-          </div>
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-24 min-h-[50vh]">
+          <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mb-3"></div>
+          <p className="text-xs font-semibold text-slate-400">Loading your exit passes...</p>
         </div>
+      ) : orders.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center bg-white rounded-3xl border border-slate-200/80 shadow-xs p-6 my-4">
+          <div className="w-16 h-16 bg-primary-50 rounded-2xl flex items-center justify-center mb-4 text-primary border border-primary-100">
+            <QrCode size={32} />
+          </div>
+          <h2 className="text-slate-900 font-display font-bold text-base tracking-tight mb-1">
+            No Exit Passes Yet
+          </h2>
+          <p className="text-slate-500 text-xs max-w-xs font-medium mb-5">
+            Your self-checkout receipts and digital gate passes will appear here after your first store purchase.
+          </p>
+          <button
+            onClick={() => navigate('/scan')}
+            className="bg-primary hover:bg-primary-600 text-white font-display font-bold text-xs px-5 py-2.5 rounded-full shadow-coral active:scale-95 transition-all"
+          >
+            Start Scanning Products
+          </button>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3.5">
+          {orders.map((order, i) => {
+            const formattedDate = order.created_at 
+              ? new Date(order.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+              : 'Recent';
+            const formattedTime = order.created_at 
+              ? new Date(order.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+              : '';
 
-        {loading ? (
-          <div className="flex justify-center py-20 min-h-[50vh] items-center">
-            <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-          </div>
-        ) : orders.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-center bg-white rounded-3xl border border-gray-100 shadow-sm mt-4">
-             <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-6 text-gray-400 shadow-inner">
-                <Receipt size={40} />
-             </div>
-             <p className="text-gray-900 font-bold text-xl tracking-tight mb-2">No Transactions Yet</p>
-             <p className="text-gray-500 font-medium max-w-xs px-4">Your completed orders and receipts will appear here.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-            {orders.map((order, i) => (
+            return (
               <motion.div 
                 key={order.order_id}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05 }}
+                transition={{ delay: i * 0.04 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => navigate(`/receipt/${order.order_id}`)}
-                className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex flex-col cursor-pointer group transition-all hover:shadow-md hover:border-gray-200"
+                className="bg-white rounded-3xl border border-slate-200/80 shadow-xs flex flex-col cursor-pointer group transition-all hover:border-slate-300 overflow-hidden"
               >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 bg-primary-50 rounded-2xl flex items-center justify-center text-primary border border-primary-100">
-                    <CreditCard size={24} />
+                {/* Pass Header */}
+                <div className="bg-slate-50/80 px-4 py-2.5 flex items-center justify-between border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-[10px] font-bold text-slate-700 bg-white px-2 py-0.5 rounded-full border border-slate-200">
+                      #EP-{order.order_id.slice(0, 8).toUpperCase()}
+                    </span>
+                    <span className="text-[10px] font-semibold text-slate-400">
+                      GATE B • #104
+                    </span>
                   </div>
-                  <div className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider border ${
+
+                  {/* Status Pill */}
+                  <div className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
                     order.is_used 
-                      ? 'bg-danger-bg text-danger border-danger/20' 
-                      : 'bg-success-bg text-success border-success/20'
+                      ? 'bg-slate-100 text-slate-600 border border-slate-200' 
+                      : 'bg-emerald-50 text-emerald-700 border border-emerald-200/80'
                   }`}>
-                    {order.is_used ? 'QR Used' : 'QR Active'}
+                    <span className={`w-1.5 h-1.5 rounded-full ${order.is_used ? 'bg-slate-400' : 'bg-emerald-500 animate-pulse'}`} />
+                    <span>{order.is_used ? 'Gate Cleared' : 'Active Pass'}</span>
                   </div>
                 </div>
 
-                <div className="flex-1 mb-5">
-                  <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1.5 font-mono">#{order.order_id.slice(0, 8)}</div>
-                  <h3 className="font-black text-gray-900 text-2xl tracking-tight group-hover:text-primary transition-colors mb-3">
-                    ₹{order.total.toFixed(2)}
-                  </h3>
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center text-[11px] text-gray-500 font-medium">
-                      <ShoppingBag size={14} className="mr-1.5 opacity-70" />
-                      {order.item_count} Items
+                {/* Pass Body */}
+                <div className="p-4 flex items-center justify-between">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Total Paid
+                    </span>
+                    <span className="font-display font-black text-2xl text-slate-900 tracking-tight tabular-nums mt-0.5">
+                      ₹{order.total.toFixed(2)}
+                    </span>
+                    
+                    <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-500">
+                      <span className="flex items-center gap-1 font-semibold text-[11px]">
+                        <ShoppingBag size={12} className="text-primary" />
+                        {order.item_count || (order.items ? order.items.length : 1)} Items
+                      </span>
+                      <span className="text-slate-300">•</span>
+                      <span className="flex items-center gap-1 text-[11px]">
+                        <Clock size={11} className="text-slate-400" />
+                        {formattedDate}{formattedTime ? `, ${formattedTime}` : ''}
+                      </span>
                     </div>
-                    <div className="flex items-center text-[11px] text-gray-500 font-medium">
-                      <Clock size={14} className="mr-1.5 opacity-70" />
-                      {new Date(order.created_at).toLocaleDateString()}
-                    </div>
+                  </div>
+
+                  {/* Right QR Icon / Arrow */}
+                  <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-700 group-hover:bg-primary-50 group-hover:text-primary transition-colors shrink-0">
+                    <QrCode size={24} />
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-4 border-t border-gray-50 mt-auto">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-primary">View Receipt</span>
-                  <ChevronRight size={18} className="text-gray-300 group-hover:text-primary transition-colors" />
+                {/* Perforated divider */}
+                <div className="relative w-full flex items-center justify-between px-0 bg-white">
+                  <div className="w-3.5 h-3.5 rounded-full bg-slate-100 -ml-2 border-r border-slate-200" />
+                  <div className="flex-1 border-t-2 border-dashed border-slate-100 mx-1" />
+                  <div className="w-3.5 h-3.5 rounded-full bg-slate-100 -mr-2 border-l border-slate-200" />
+                </div>
+
+                {/* Footer Action */}
+                <div className="bg-slate-50/50 px-4 py-2.5 flex items-center justify-between text-xs font-semibold text-slate-600 group-hover:text-primary transition-colors">
+                  <span className="text-[11px] font-display font-bold">View Gate Pass & Tax Invoice</span>
+                  <ChevronRight size={15} />
                 </div>
               </motion.div>
-            ))}
-          </div>
-        )}
-      </div>
+            );
+          })}
+        </div>
+      )}
+
     </div>
   );
 };
